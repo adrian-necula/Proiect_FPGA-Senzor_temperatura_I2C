@@ -74,9 +74,34 @@ Modulul este gandit sub forma unui FSM cu starile:
 
 - IDLE - asteapta o comanda;
 - START - genereaza conditia de START;
+- HOLD - pastreaza transmisia activa si asteapta urmatoarea comanda;
 - WRITE - transmite cei 8 biti;
 - WRITE_ACK - citeste ACK-ul trimis de slave;
 - READ - receptioneaza cei 8 biti;
 - READ_ACK - transmite ACK sau NACK;
 - STOP - genereaza conditia de STOP.
+
+Semnalul ready arata ca modulul poate primi o comanda noua, iar done genereaza un impuls atunci cand comanda curenta a fost terminata.
+
+La scriere, iesirea ack indica daca slave-ul a confirmat byte-ul transmis.
+
+Linia SDA este controlata in regim open-drain. Master-ul poate sa traga linia la 0 sau sa o elibereze, valoarea 1 fiind obtinuta prin rezistenta de pull-up.
+
+- [Codul modulului i2c_master](src/i2c_master.sv)
+
+## Simularea modulului i2c_master
+
+Pentru verificare am realizat un testbench simplu care simuleaza si comportamentul unui dispozitiv slave. In testbench am folosit temporar frecventa de 1 MHz pentru ca simularea sa se execute mai rapid.
+
+Am verificat urmatoarea secventa:
+
+START -> WRITE A5 -> ACK -> REPEATED START -> READ 3C -> NACK -> STOP
+
+Master-ul transmite valoarea A5, iar slave-ul raspunde cu ACK. Apoi master-ul genereaza un repeated START, iar slave-ul transmite valoarea 3C. Master-ul raspunde cu NACK pentru a indica faptul ca nu mai doreste alte date, dupa care genereaza conditia de STOP.
+
+In simulare am urmarit liniile SCL si SDA, starile FSM-ului, byte-urile transmise si receptionate si semnalele ack, ready si done.
+
+- [Testbench pentru i2c_master](sim/test_i2c_master.sv)
+
+![Simulare I2C Master](images/test_i2c_master.png)
 
