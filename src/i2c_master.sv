@@ -28,7 +28,8 @@ module i2c_master #(
     input cmd_start,
     input [2:0] cmd,
     input [7:0] din,
-    inout sda,
+    input  logic sda_in,
+    output logic sda_out,
     output logic scl,
     output logic [7:0] dout,
     output logic ack,
@@ -46,10 +47,10 @@ localparam logic [2:0]
     CMD_STOP = 3'd4;
 
 localparam logic [1:0]
-    DATA_SETUP = 2'd0,  // pregateste SDA cat timp SCL este 0
-    SCL_HIGH = 2'd1,    // ridica SCL la 1
-    DATA_SAMPLE = 2'd2, // citeste sau mentine SDA cat timp SCL este 1 
-    SCL_LOW = 2'd3;     // coboara SCL si trece la bitul urmator
+    PHASE_0 = 2'd0,  // pregateste SDA cat timp SCL este 0
+    PHASE_1 = 2'd1,    // ridica SCL la 1
+    PHASE_2 = 2'd2, // citeste sau mentine SDA cat timp SCL este 1 
+    PHASE_3 = 2'd3;     // coboara SCL si trece la bitul urmator
 
 typedef enum logic [2:0] {
     IDLE,       // bus liber
@@ -73,28 +74,21 @@ logic [2:0] bit_index;
 logic [7:0] date_tx;
 logic [7:0] date_rx;
 
-logic sda_low;  // control sda (sda_low = 1 -> sda 0)
 logic nack;     // nack = 0 -> masterul trim ACK | nack = 1 -> masterul trim NACK
 
-wire sda_citit;
-
 assign faza_tick = (contor_clk == DIVIDER - 1);
-
-assign sda = sda_low ? 1'b0 : 1'bz;
-assign sda_citit = sda;
-
 assign ready = (current_state == IDLE)||(current_state == HOLD);
 
 always @(posedge clk) begin
     if (rst) begin
         current_state <= IDLE;
         contor_clk <= 0;
-        faza <= DATA_SETUP;
+        faza <= PHASE_0;
         bit_index <= 0;
         date_tx <= 0;
         date_rx <= 0;
         scl <= 1'b1;
-        sda_low <= 1'b0;
+        sda_out <= 1'b1;
         dout <= 0;
         ack <= 1'b0;
         nack <= 1'b0;
@@ -111,8 +105,9 @@ always @(posedge clk) begin
 
             IDLE: begin
                 scl <= 1'b1;
-                sda_low <= 1'b0;
-                faza <= DATA_SETUP;
+                sda_out <= 1'b1;
+                faza <= PHASE_0;
+                
                 if (cmd_start && cmd == CMD_START) begin
                     contor_clk <= 0;
                     current_state <= START;
@@ -121,29 +116,30 @@ always @(posedge clk) begin
 
             START: begin
                 if (faza_tick) begin
+                
                     case (faza)
-
-                        DATA_SETUP: begin
+                        PHASE_0: begin
                             scl <= 1'b1;
-                            sda_low <= 1'b0;
-                            faza <= SCL_HIGH;
+                            sda_out <= 1'b1;
+                            faza <= PHASE_1;
                         end
 
-                        SCL_HIGH: begin
+                        PHASE_1: begin
                             scl <= 1'b1;
-                            sda_low <= 1'b1;
-                            faza <= DATA_SAMPLE;
+                            sda_out <= 1'b0;
+                            faza <= PHASE_2;
                         end
 
-                        DATA_SAMPLE: begin
+                        PHASE_2: begin
                             scl <= 1'b1;
-                            sda_low <= 1'b1;
-                            faza <= SCL_LOW;
+                            sda_out <= 1'b0;
+                            faza <= PHASE_3;
                         end
 
-                        SCL_LOW: begin
+                        PHASE_3: begin
                             scl <= 1'b0;
-                            faza <= DATA_SETUP;
+                            sda_out <= 1'b0;
+                            faza <= PHASE_0;
                             done <= 1'b1;
                             current_state <= HOLD;
                         end
@@ -154,8 +150,9 @@ always @(posedge clk) begin
 
             HOLD: begin
                 scl <= 1'b0;
-                sda_low <= 1'b0;
-                faza <= DATA_SETUP;
+                sda_out <= 1'b1;
+                faza <= PHASE_0;
+                
                 if (cmd_start) begin
                     contor_clk <= 0;
 
@@ -200,33 +197,28 @@ always @(posedge clk) begin
 
             WRITE: begin
                 if (faza_tick) begin
+                
                     case (faza)
 
-                        DATA_SETUP: begin
+                        PHASE_0: begin
                             scl <= 1'b0;
-
-                            if (date_tx[bit_index] == 1'b0)
-                                sda_low <= 1'b1;
-                            else
-                                sda_low <= 1'b0;
-
-                            faza <= SCL_HIGH;
+                            sda_out <= date_tx[bit_index];
+                            faza <= PHASE_1;
                         end
 
-                        SCL_HIGH: begin
+                        PHASE_1: begin
                             scl <= 1'b1;
-                            faza <= DATA_SAMPLE;
+                            faza <= PHASE_2;
                         end
 
-                        DATA_SAMPLE: begin
+                        PHASE_2: begin
                             scl <= 1'b1;
-                            faza <= SCL_LOW;
+                            faza <= PHASE_3;
                         end
 
-                        SCL_LOW: begin
+                        PHASE_3: begin
                             scl <= 1'b0;
-                            faza <= DATA_SETUP;
-
+                            faza <= PHASE_0;
                             if (bit_index == 0)
                                 current_state <= WRITE_ACK;
                             else
@@ -239,33 +231,29 @@ always @(posedge clk) begin
 
             WRITE_ACK: begin
                 if (faza_tick) begin
+
                     case (faza)
 
-                        DATA_SETUP: begin
+                        PHASE_0: begin
                             scl <= 1'b0;
-                            sda_low <= 1'b0;
-                            faza <= SCL_HIGH;
+                            sda_out <= 1'b1;
+                            faza <= PHASE_1;
                         end
 
-                        SCL_HIGH: begin
+                        PHASE_1: begin
                             scl <= 1'b1;
-                            faza <= DATA_SAMPLE;
+                            faza <= PHASE_2;
                         end
 
-                        DATA_SAMPLE: begin
+                        PHASE_2: begin
                             scl <= 1'b1;
-
-                            if (sda_citit == 1'b0)
-                                ack <= 1'b1;
-                            else
-                                ack <= 1'b0;
-
-                            faza <= SCL_LOW;
+                            ack <= !sda_in;
+                            faza <= PHASE_3;
                         end
 
-                        SCL_LOW: begin
+                        PHASE_3: begin
                             scl <= 1'b0;
-                            faza <= DATA_SETUP;
+                            faza <= PHASE_0;
                             done <= 1'b1;
                             current_state <= HOLD;
                         end
@@ -276,28 +264,29 @@ always @(posedge clk) begin
 
             READ: begin
                 if (faza_tick) begin
+                
                     case (faza)
 
-                        DATA_SETUP: begin
+                        PHASE_0: begin
                             scl <= 1'b0;
-                            sda_low <= 1'b0;
-                            faza <= SCL_HIGH;
+                            sda_out <= 1'b1;
+                            faza <= PHASE_1;
                         end
 
-                        SCL_HIGH: begin
+                        PHASE_1: begin
                             scl <= 1'b1;
-                            faza <= DATA_SAMPLE;
+                            faza <= PHASE_2;
                         end
 
-                        DATA_SAMPLE: begin
+                        PHASE_2: begin
                             scl <= 1'b1;
-                            date_rx[bit_index] <= sda_citit;
-                            faza <= SCL_LOW;
+                            date_rx[bit_index] <= sda_in;
+                            faza <= PHASE_3;
                         end
 
-                        SCL_LOW: begin
+                        PHASE_3: begin
                             scl <= 1'b0;
-                            faza <= DATA_SETUP;
+                            faza <= PHASE_0;
 
                             if (bit_index == 0) begin
                                 dout <= date_rx;
@@ -314,33 +303,32 @@ always @(posedge clk) begin
 
             READ_ACK: begin
                 if (faza_tick) begin
+                
                     case (faza)
 
-                        DATA_SETUP: begin
+                        PHASE_0: begin
                             scl <= 1'b0;
-
                             if (nack)
-                                sda_low <= 1'b0;
+                                sda_out <= 1'b1;
                             else
-                                sda_low <= 1'b1;
-
-                            faza <= SCL_HIGH;
+                                sda_out <= 1'b0;
+                            faza <= PHASE_1;
                         end
 
-                        SCL_HIGH: begin
+                        PHASE_1: begin
                             scl <= 1'b1;
-                            faza <= DATA_SAMPLE;
+                            faza <= PHASE_2;
                         end
 
-                        DATA_SAMPLE: begin
+                        PHASE_2: begin
                             scl <= 1'b1;
-                            faza <= SCL_LOW;
+                            faza <= PHASE_3;
                         end
 
-                        SCL_LOW: begin
+                        PHASE_3: begin
                             scl <= 1'b0;
-                            sda_low <= 1'b0;
-                            faza <= DATA_SETUP;
+                            sda_out <= 1'b1;
+                            faza <= PHASE_0;
                             done <= 1'b1;
                             current_state <= HOLD;
                         end
@@ -351,29 +339,31 @@ always @(posedge clk) begin
 
             STOP: begin
                 if (faza_tick) begin
+                
                     case (faza)
 
-                        DATA_SETUP: begin
+                        PHASE_0: begin
                             scl <= 1'b0;
-                            sda_low <= 1'b1;
-                            faza <= SCL_HIGH;
+                            sda_out <= 1'b0;
+                            faza <= PHASE_1;
                         end
 
-                        SCL_HIGH: begin
+                        PHASE_1: begin
                             scl <= 1'b1;
-                            sda_low <= 1'b1;
-                            faza <= DATA_SAMPLE;
+                            sda_out <= 1'b0;
+                            faza <= PHASE_2;
                         end
 
-                        DATA_SAMPLE: begin
+                        PHASE_2: begin
                             scl <= 1'b1;
-                            sda_low <= 1'b0;
-                            faza <= SCL_LOW;
+                            sda_out <= 1'b1;
+                            faza <= PHASE_3;
                         end
 
-                        SCL_LOW: begin
+                        PHASE_3: begin
                             scl <= 1'b1;
-                            faza <= DATA_SETUP;
+                            sda_out <= 1'b1;
+                            faza <= PHASE_0;
                             done <= 1'b1;
                             current_state <= IDLE;
                         end
@@ -385,8 +375,8 @@ always @(posedge clk) begin
             default: begin
                 current_state <= IDLE;
                 scl <= 1'b1;
-                sda_low <= 1'b0;
-                faza <= DATA_SETUP;
+                sda_out <= 1'b1;
+                faza <= PHASE_0;
             end
 
         endcase
