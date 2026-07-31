@@ -85,13 +85,36 @@ Semnalul ready arata ca modulul poate primi o comanda noua, iar done genereaza u
 
 La scriere, iesirea ack indica daca slave-ul a confirmat byte-ul transmis.
 
-Linia SDA este controlata in regim open-drain. Master-ul poate sa traga linia la 0 sau sa o elibereze, valoarea 1 fiind obtinuta prin rezistenta de pull-up.
+### Controlul liniei SDA
+
+Initial, linia SDA era declarata ca inout si era controlata prin atribuirea valorilor 0 si 1'bz. De asemenea, in testbench era folosita o rezistenta pullup pentru obtinerea nivelului logic 1.
+
+Pentru simplificarea modulului am separat magistrala SDA in doua semnale:
+
+- sda_out - indica valoarea transmisa de master;
+- sda_in - reprezinta valoarea citita de master.
+
+Protocolul I2C foloseste iesiri de tip open-drain. Un dispozitiv poate trage linia SDA la 0 sau o poate elibera, iar nivelul 1 este obtinut prin rezistenta fizica de pull-up.
+
+In modulul actual:
+
+- sda_out = 0 inseamna ca master-ul trage linia la 0;
+- sda_out = 1 inseamna ca master-ul elibereaza linia;
+- sda_in este folosit pentru citirea datelor si a raspunsului ACK.
+
+Astfel, modulul i2c_master nu mai foloseste un port inout, valoarea 1'bz sau o rezistenta pullup. Conectarea la pinul fizic bidirectional SDA va fi realizata ulterior in modulul top.
 
 - [Codul modulului i2c_master](src/i2c_master.sv)
 
 ## Simularea modulului i2c_master
 
-Pentru verificare am realizat un testbench simplu care simuleaza si comportamentul unui dispozitiv slave. In testbench am folosit temporar frecventa de 1 MHz pentru ca simularea sa se execute mai rapid.
+Pentru verificare am realizat un testbench simplu care simuleaza si comportamentul unui dispozitiv slave.
+
+Comportamentul magistralei SDA este simulat prin relatia:
+
+sda_in = sda_out & slave_out
+
+Atat master-ul, cat si slave-ul folosesc valoarea 0 pentru a trage linia la 0 si valoarea 1 pentru a o elibera. In acest mod nu mai sunt necesare valoarea 1'bz si rezistenta pullup in testbench.
 
 Am verificat urmatoarea secventa:
 
@@ -99,7 +122,7 @@ START -> WRITE A5 -> ACK -> REPEATED START -> READ 3C -> NACK -> STOP
 
 Master-ul transmite valoarea A5, iar slave-ul raspunde cu ACK. Apoi master-ul genereaza un repeated START, iar slave-ul transmite valoarea 3C. Master-ul raspunde cu NACK pentru a indica faptul ca nu mai doreste alte date, dupa care genereaza conditia de STOP.
 
-In simulare am urmarit liniile SCL si SDA, starile FSM-ului, byte-urile transmise si receptionate si semnalele ack, ready si done.
+In simulare am urmarit semnalele SCL, sda_in si sda_out, starile FSM-ului, comenzile, byte-urile transmise si receptionate si semnalele ack, ready si done.
 
 - [Testbench pentru i2c_master](sim/test_i2c_master.sv)
 
