@@ -22,20 +22,27 @@
 module test_i2c_master;
 
 localparam integer CLK_FREQ = 100_000_000;
-localparam integer I2C_FREQ = 1_000_000;
+localparam integer I2C_FREQ = 100_000;
 
-localparam logic [2:0]
+typedef enum logic [2:0] {
     CMD_START = 3'd0,
     CMD_WRITE = 3'd1,
     CMD_READ_ACK = 3'd2,
     CMD_READ_NACK = 3'd3,
-    CMD_STOP = 3'd4;
+    CMD_STOP = 3'd4
+} i2c_cmd_t; 
+
+i2c_cmd_t cmd;
 
 logic clk;
 logic rst;
+
 logic cmd_start;
-logic [2:0] cmd;
 logic [7:0] din;
+
+logic sda_in;
+logic sda_out;
+logic slave_out;
 
 logic scl;
 logic [7:0] dout;
@@ -43,92 +50,86 @@ logic ack;
 logic ready;
 logic done;
 
-wire sda;
-logic slave_low;
-
-integer i;
-
-assign sda = slave_low ? 1'b0 : 1'bz;
-pullup(sda);
+always @(*) begin
+    sda_in = sda_out & slave_out;
+end
 
 initial begin
     clk = 1'b0;
     forever #5 clk = !clk;
 end
 
-task send_cmd(
-    input [2:0] command,
-    input [7:0] data
-);
-begin
-    wait(ready == 1'b1);
-
-    @(negedge clk);
-    cmd = command;
-    din = data;
-    cmd_start = 1'b1;
-
-    @(negedge clk);
-    cmd_start = 1'b0;
-end
+task send_cmd;
+    input i2c_cmd_t command;
+    input [7:0] data;
+    
+    begin
+        wait(ready == 1'b1);
+    
+        @(negedge clk);
+        cmd = command;
+        din = data;
+        cmd_start = 1'b1;
+    
+        @(negedge clk);
+        cmd_start = 1'b0;
+    end
 endtask
 
-task simple_cmd(
-    input [2:0] command
-);
-begin
-    send_cmd(command, 8'h00);
-
-    wait(ready == 1'b0);
-    wait(ready == 1'b1);
-end
+task simple_cmd;
+    input i2c_cmd_t command;
+    
+    begin
+        send_cmd(command, 8'h00);
+    
+        wait(ready == 1'b0);
+        wait(ready == 1'b1);
+    end
 endtask
 
-task write_byte(             // master transmite un byte, slave raspunde cu ack
-    input [7:0] data
-);
-begin
-    send_cmd(CMD_WRITE, data);
-
-    wait(ready == 1'b0);
-
-    repeat (8)
-    @(posedge scl);
-
-    @(negedge scl);
-    slave_low = 1'b1;       // slave trimite ack, sda = 0
-
-    @(posedge scl);
-    @(negedge scl);
-
-    slave_low = 1'b0;       // slave elibereaza sda
-
-    wait(ready == 1'b1);
-end
-endtask
-
-task read_byte(             // slave transmite un byte, master raspunde cu nack
-    input [7:0] data
-);
-begin
-    send_cmd(CMD_READ_NACK, 8'h00);
-
-    wait(ready == 1'b0);
-
-    for (i = 7; i >= 0; i = i - 1) begin        // msb -> lsb
-        if (data[i] == 1'b0)
-            slave_low = 1'b1;
-        else
-            slave_low = 1'b0;
-
+task write_byte;          // master transmite un byte, slave raspunde cu ack
+    input [7:0] data;
+    
+    begin
+        send_cmd(CMD_WRITE, data);
+    
+        wait(ready == 1'b0);
+    
+        repeat (8)
+        @(posedge scl);
+    
+        @(negedge scl);
+        slave_out = 1'b0;       // slave raspunde cu ack 
+    
         @(posedge scl);
         @(negedge scl);
+    
+        slave_out = 1'b1;       // slave elibereaza sda
+    
+        wait(ready == 1'b1);
     end
+endtask
 
-    slave_low = 1'b0;
-
-    wait(ready == 1'b1);
-end
+task read_byte;             // slave transmite un byte, master raspunde cu nack
+    input [7:0] data;
+    integer i;
+    
+    begin
+        send_cmd(CMD_READ_NACK, 8'h00);
+    
+        wait(ready == 1'b0);
+    
+        for (i = 7; i >= 0; i = i - 1) begin        // msb -> lsb
+            slave_out = data[i];
+    
+            @(posedge scl);
+            @(negedge scl);
+        end
+    
+        slave_out = 1'b1;
+    
+        wait(ready == 1'b1);
+    end
 endtask
 
 initial begin
@@ -136,7 +137,7 @@ initial begin
     cmd_start = 1'b0;
     cmd = CMD_START;
     din = 8'h00;
-    slave_low = 1'b0;
+    slave_out = 1'b1;
 
     repeat (5)
     @(posedge clk);
@@ -172,7 +173,8 @@ i2c_master #(
     .cmd_start(cmd_start),
     .cmd(cmd),
     .din(din),
-    .sda(sda),
+    .sda_in(sda_in),
+    .sda_out(sda_out),
     .scl(scl),
     .dout(dout),
     .ack(ack),
