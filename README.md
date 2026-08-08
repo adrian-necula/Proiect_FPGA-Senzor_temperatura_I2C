@@ -106,6 +106,32 @@ Astfel, modulul i2c_master nu mai foloseste un port inout, valoarea 1'bz sau o r
 
 - [Codul modulului i2c_master](src/i2c_master.sv)
 
+
+## Structura modulului i2c_dummy_slave
+
+Pentru verificarea comunicatiei I2C am realizat modulul i2c_dummy_slave, folosit strict pentru simulare.
+
+Am gandit modulul ca un slave I2C simplificat, care sa reproduca doar comportamentul necesar pentru verificarea modulului i2c_master. In loc ca raspunsurile slave-ului sa fie generate manual din testbench, acestea sunt realizate de un modul separat, care urmareste semnalele SCL si SDA si reactioneaza la comenzile master-ului.
+
+Modulul este implementat sub forma unui FSM cu starile:
+
+- WAIT_START - asteapta conditia de START;
+- RECEIVE - receptioneaza cei 8 biti transmisi de master;
+- SEND_ACK - transmite ACK catre master;
+- WAIT_RESTART - asteapta conditia de repeated START;
+- TRANSMIT - transmite valoarea hardcodata 3C;
+- READ_NACK - asteapta raspunsul NACK al master-ului;
+- WAIT_STOP - asteapta conditia de STOP.
+
+La receptionare, slave-ul citeste valoarea liniei SDA la fiecare front pozitiv al semnalului SCL si formeaza treptat byte-ul primit. La transmitere, valoarea SDA este pregatita pe frontul negativ al lui SCL, astfel incat aceasta sa fie stabila atunci cand master-ul o citeste.
+
+Pentru testare, slave-ul receptioneaza valoarea A5 transmisa de master, raspunde cu ACK, iar dupa repeated START transmite inapoi valoarea hardcodata 3C. La final, asteapta NACK-ul master-ului si conditia de STOP.
+
+Astfel, comunicatia se realizeaza efectiv intre modulele i2c_master si i2c_dummy_slave.
+
+- [Codul modulului i2c_dummy_slave](src/i2c_dummy_slave.sv)
+
+
 ## Simularea modulului i2c_master
 
 Pentru verificare am realizat un testbench simplu care simuleaza si comportamentul unui dispozitiv slave.
