@@ -30,28 +30,27 @@ typedef enum logic [2:0] {
     CMD_READ_ACK = 3'd2,
     CMD_READ_NACK = 3'd3,
     CMD_STOP = 3'd4
-} i2c_cmd_t; 
+} i2c_cmd_t;
 
 i2c_cmd_t cmd;
 
 logic clk;
 logic rst;
-
 logic cmd_start;
 logic [7:0] din;
-
-logic sda_in;
-logic sda_out;
-logic slave_out;
-
 logic scl;
+logic master_sda_out;
+logic slave_sda_out;
+logic sda_bus;
 logic [7:0] dout;
 logic ack;
 logic ready;
 logic done;
+logic [7:0] slave_rx_data;
 
+// simulare magistra sda
 always @(*) begin
-    sda_in = sda_out & slave_out;
+    sda_bus = master_sda_out & slave_sda_out;
 end
 
 initial begin
@@ -59,77 +58,27 @@ initial begin
     forever #5 clk = !clk;
 end
 
-task send_cmd;
+// task comenzi
+task I2C_SEND_CMD;
     input i2c_cmd_t command;
     input [7:0] data;
-    
     begin
-        wait(ready == 1'b1);
-    
+        wait(ready == 1'b1);    // asteapta pana cand master este pregatit
+
         @(negedge clk);
         cmd = command;
         din = data;
         cmd_start = 1'b1;
-    
-        @(negedge clk);
+
+        @(negedge clk);         // opreste impuls cmd_start
+
         cmd_start = 1'b0;
-    end
-endtask
 
-task simple_cmd;
-    input i2c_cmd_t command;
-    
-    begin
-        send_cmd(command, 8'h00);
-    
-        wait(ready == 1'b0);
+        wait(ready == 1'b0);    // asteapta executarea comenzii
         wait(ready == 1'b1);
-    end
-endtask
 
-task write_byte;          // master transmite un byte, slave raspunde cu ack
-    input [7:0] data;
-    
-    begin
-        send_cmd(CMD_WRITE, data);
-    
-        wait(ready == 1'b0);
-    
-        repeat (8)
-        @(posedge scl);
-    
-        @(negedge scl);
-        slave_out = 1'b0;       // slave raspunde cu ack 
-    
-        @(posedge scl);
-        @(negedge scl);
-    
-        slave_out = 1'b1;       // slave elibereaza sda
-    
-        wait(ready == 1'b1);
     end
-endtask
 
-task read_byte;             // slave transmite un byte, master raspunde cu nack
-    input [7:0] data;
-    integer i;
-    
-    begin
-        send_cmd(CMD_READ_NACK, 8'h00);
-    
-        wait(ready == 1'b0);
-    
-        for (i = 7; i >= 0; i = i - 1) begin        // msb -> lsb
-            slave_out = data[i];
-    
-            @(posedge scl);
-            @(negedge scl);
-        end
-    
-        slave_out = 1'b1;
-    
-        wait(ready == 1'b1);
-    end
 endtask
 
 initial begin
@@ -137,7 +86,6 @@ initial begin
     cmd_start = 1'b0;
     cmd = CMD_START;
     din = 8'h00;
-    slave_out = 1'b1;
 
     repeat (5)
     @(posedge clk);
@@ -148,38 +96,50 @@ initial begin
     repeat (3)
     @(posedge clk);
 
-    simple_cmd(CMD_START);
+    I2C_SEND_CMD(CMD_START, 8'h00);     // start
 
-    write_byte(8'hA5);  // master trimite A5, slave raspunde ack
-
-    simple_cmd(CMD_START);  // start repetat
+    I2C_SEND_CMD(CMD_WRITE, 8'hA5);     // master transmite A5
+                                        // dummy slave receptioneaza A5 si raspunde cu ack
     
-    read_byte(8'h3C);   // slave trimite 3C, master raspunde nack
+    I2C_SEND_CMD(CMD_START, 8'h00);     // repeated start
 
-    simple_cmd(CMD_STOP);   // stop
+    I2C_SEND_CMD(CMD_READ_NACK, 8'h00); // dummy slave transmite 3C
+                                        // master raspunde cu nack
+
+    I2C_SEND_CMD(CMD_STOP, 8'h00);      // stop
 
     repeat (10)
     @(posedge clk);
 
     $finish;
+
 end
 
 i2c_master #(
     .CLK_FREQ(CLK_FREQ),
     .I2C_FREQ(I2C_FREQ)
-) dut (
+) dut_master (
     .clk(clk),
     .rst(rst),
     .cmd_start(cmd_start),
     .cmd(cmd),
     .din(din),
-    .sda_in(sda_in),
-    .sda_out(sda_out),
+    .sda_in(sda_bus),
+    .sda_out(master_sda_out),
     .scl(scl),
     .dout(dout),
     .ack(ack),
     .ready(ready),
     .done(done)
+);
+
+i2c_dummy_slave dut_slave (
+    .clk(clk),
+    .rst(rst),
+    .scl(scl),
+    .sda_in(sda_bus),
+    .sda_out(slave_sda_out),
+    .rx_data(slave_rx_data)
 );
 
 endmodule
