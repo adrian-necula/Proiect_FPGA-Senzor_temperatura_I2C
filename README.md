@@ -134,11 +134,11 @@ Astfel, comunicatia se realizeaza efectiv intre modulele i2c_master si i2c_dummy
 
 ## Simularea modulului i2c_master
 
-Pentru verificare am realizat un testbench simplu care simuleaza si comportamentul unui dispozitiv slave.
+Pentru verificare am conectat modulul i2c_master la i2c_dummy_slave, astfel incat transmiterea si receptionarea datelor sa fie realizate efectiv intre cele doua module.
 
 Comportamentul magistralei SDA este simulat prin relatia:
 
-sda_in = sda_out & slave_out
+sda_bus = master_sda_out & slave_sda_out
 
 Atat master-ul, cat si slave-ul folosesc valoarea 0 pentru a trage linia la 0 si valoarea 1 pentru a o elibera. In acest mod nu mai sunt necesare valoarea 1'bz si rezistenta pullup in testbench.
 
@@ -146,9 +146,9 @@ Am verificat urmatoarea secventa:
 
 START -> WRITE A5 -> ACK -> REPEATED START -> READ 3C -> NACK -> STOP
 
-Master-ul transmite valoarea A5, iar slave-ul raspunde cu ACK. Apoi master-ul genereaza un repeated START, iar slave-ul transmite valoarea 3C. Master-ul raspunde cu NACK pentru a indica faptul ca nu mai doreste alte date, dupa care genereaza conditia de STOP.
+Master-ul transmite valoarea A5, iar dummy slave-ul o receptioneaza si raspunde cu ACK. Dupa repeated START, dummy slave-ul transmite valoarea 3C, care este receptionata de master. Master-ul raspunde cu NACK si genereaza apoi conditia de STOP.
 
-In simulare am urmarit semnalele SCL, sda_in si sda_out, starile FSM-ului, comenzile, byte-urile transmise si receptionate si semnalele ack, ready si done.
+In simulare am urmarit comenzile, semnalele SDA si SCL, starile FSM si datele transmise intre master si slave.
 
 - [Testbench pentru i2c_master](sim/test_i2c_master.sv)
 
