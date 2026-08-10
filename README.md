@@ -154,3 +154,44 @@ In simulare am urmarit comenzile, semnalele SDA si SCL, starile FSM si datele tr
 
 ![Simulare I2C Master](images/test_i2c_master.png)
 
+
+## Structura modulului temp_controller
+
+Modulul temp_controller controleaza secventa necesara pentru citirea temperaturii prin intermediul modulului i2c_master.
+
+Secventa folosita este:
+
+- START;
+- transmiterea adresei 96 pentru scriere;
+- transmiterea registrului 00;
+- repeated START;
+- transmiterea adresei 97 pentru citire;
+- citirea MSB cu ACK;
+- citirea LSB cu NACK;
+- STOP.
+
+Modulul este gandit sub forma unui FSM cu starile:
+
+- IDLE - asteapta pana la urmatoarea citire;
+- SEND_START - trimite comanda START;
+- WAIT_START - asteapta terminarea comenzii;
+- SEND_ADD_WR - trimite adresa senzorului pentru scriere;
+- WAIT_ADD_WR - asteapta raspunsul si verifica ACK-ul;
+- SEND_REG - trimite registrul de temperatura;
+- WAIT_REG - asteapta raspunsul si verifica ACK-ul;
+- SEND_RESTART - trimite repeated START;
+- WAIT_RESTART - asteapta terminarea comenzii;
+- SEND_ADD_RD - trimite adresa senzorului pentru citire;
+- WAIT_ADD_RD - asteapta raspunsul si verifica ACK-ul;
+- SEND_RD_MSB - citeste primul byte si trimite ACK;
+- WAIT_RD_MSB - memoreaza byte-ul MSB;
+- SEND_RD_LSB - citeste al doilea byte si trimite NACK;
+- WAIT_RD_LSB - formeaza valoarea temperature_raw;
+- SEND_STOP - trimite comanda STOP;
+- WAIT_STOP - asteapta terminarea citirii.
+
+Cei doi bytes cititi formeaza valoarea temperature_raw pe 16 biti. data_valid indica o citire completa, iar ack_error semnaleaza lipsa unui ACK.
+
+Citirea este realizata periodic folosind FIRST_READ_DELAY si READ_INTERVAL. Am ales FIRST_READ_DELAY = 1_000_000, adica aproximativ 10 ms la 100 MHz, deoarece prima conversie a senzorului dupa pornire dureaza aproximativ 6 ms. READ_INTERVAL = 24_000_000 corespunde la aproximativ 240 ms, valoare aleasa in functie de timpul unei conversii normale a senzorului.
+
+- [Codul modulului temp_controller](src/temp_controller.sv)
