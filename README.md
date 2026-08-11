@@ -195,3 +195,12 @@ Cei doi bytes cititi formeaza valoarea temperature_raw pe 16 biti. data_valid in
 Citirea este realizata periodic folosind FIRST_READ_DELAY si READ_INTERVAL. Am ales FIRST_READ_DELAY = 1_000_000, adica aproximativ 10 ms la 100 MHz, deoarece prima conversie a senzorului dupa pornire dureaza aproximativ 6 ms. READ_INTERVAL = 24_000_000 corespunde la aproximativ 240 ms, valoare aleasa in functie de timpul unei conversii normale a senzorului.
 
 - [Codul modulului temp_controller](src/temp_controller.sv)
+
+
+## Structura modulului temp_converter
+
+Modulul temp_converter realizeaza conversia valorii brute primite de la senzor in grade Celsius.
+
+Valoarea temperaturii este separata in partea intreaga, partea zecimala si semn. Pentru temperaturile negative, valoarea este pastrata pozitiva pentru afisaj, iar semnul este transmis separat pentru a putea fi folosit la UART.
+
+- [Codul modulului temp_converter](src/temp_converter.sv)
