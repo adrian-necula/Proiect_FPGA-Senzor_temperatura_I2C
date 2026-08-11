@@ -204,3 +204,13 @@ Modulul temp_converter realizeaza conversia valorii brute primite de la senzor i
 Valoarea temperaturii este separata in partea intreaga, partea zecimala si semn. Pentru temperaturile negative, valoarea este pastrata pozitiva pentru afisaj, iar semnul este transmis separat pentru a putea fi folosit la UART.
 
 - [Codul modulului temp_converter](src/temp_converter.sv)
+
+
+## Structura modulului temp_to_digits
+
+Modulul temp_to_digits pregateste cifrele necesare pentru afisarea temperaturii pe display-ul cu 7 segmente.
+
+Temperatura este pregatita pentru afisare in formatul 25.0°, iar pentru valorile sub 10 grade prima pozitie este lasata libera.
+
+- [Codul modulului temp_to_digits](src/temp_to_digits.sv)
+
