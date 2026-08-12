@@ -20,15 +20,15 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module i2c_dummy_slave (
-    input logic clk,
-    input logic rst,
-    input logic scl,
-    input logic sda_in,     // val citita de slave
+    input clk,
+    input rst,
+    input scl,
+    input sda_in,     // val citita de slave
     output logic sda_out,   // val transmisa de slave
     output logic [7:0] rx_data  // byte receptionat de la master
 );
 
-localparam logic [7:0] TX_DATA = 8'h3C;
+localparam [7:0] TX_DATA = 8'h3C;
 
 typedef enum logic [2:0] {
     WAIT_START,
@@ -73,23 +73,28 @@ always @(posedge clk) begin
             RECEIVE: begin
                 if (scl && !scl_old) begin
                     rx_data[bit_index] <= sda_in;
-                    if (bit_index == 0)
+                    if (bit_index == 3'd0) begin
                         current_state <= SEND_ACK;
-                    else
-                        bit_index <= bit_index - 1'b1;
+                    end
+                    else begin
+                        bit_index <= bit_index - 3'd1;
+                    end
                 end
             end
             
             SEND_ACK: begin
-                if (!scl && scl_old)
+                if (!scl && scl_old) begin
                     sda_out <= 1'b0;
-                if (scl && !scl_old)
+                end
+                if (scl && !scl_old) begin
                     current_state <= WAIT_RESTART;
+                end
             end
 
             WAIT_RESTART: begin     // elibereaza sda si asteapta repeated start
-                if (!scl && scl_old)
+                if (!scl && scl_old) begin
                     sda_out <= 1'b1;
+                end
                 if (sda_old && !sda_in && scl) begin
                     bit_index <= 3'd7;
                     current_state <= TRANSMIT;
@@ -97,29 +102,35 @@ always @(posedge clk) begin
             end
 
             TRANSMIT: begin     // transmite valoarea 3C
-                if (!scl && scl_old)
+                if (!scl && scl_old) begin
                     sda_out <= TX_DATA[bit_index];
+                end
                 if (scl && !scl_old) begin
-                    if (bit_index == 0)
+                    if (bit_index == 3'd0) begin
                         current_state <= READ_NACK;
-                    else
-                        bit_index <= bit_index - 1'b1;
+                    end
+                    else begin
+                        bit_index <= bit_index - 3'd1;
+                    end
                 end
             end
 
             READ_NACK: begin    // elibereaza sda pentru nack master
-                if (!scl && scl_old)
+                if (!scl && scl_old) begin
                     sda_out <= 1'b1;
+                end
                 if (scl && !scl_old) begin
-                    if (sda_in == 1'b1)
+                    if (sda_in == 1'b1) begin
                         current_state <= WAIT_STOP;
+                    end
                 end
             end
 
             WAIT_STOP: begin
                 sda_out <= 1'b1;
-                if (!sda_old && sda_in && scl)
+                if (!sda_old && sda_in && scl) begin
                     current_state <= WAIT_START;
+                end
             end
 
             default: begin
