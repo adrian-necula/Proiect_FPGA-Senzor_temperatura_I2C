@@ -19,14 +19,13 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-
 module temp_to_digits(
-    input logic [7:0] temp_celsius,
-    input logic [3:0] temp_fraction,
-    output logic [3:0] digit0,
-    output logic [3:0] digit1,
-    output logic [3:0] digit2,
-    output logic [3:0] digit3
+    input [7:0] temp_celsius,
+    input [3:0] temp_fraction,
+    output reg [3:0] digit0,
+    output reg [3:0] digit1,
+    output reg [3:0] digit2,
+    output reg [3:0] digit3
 );
 
 always @(*) begin
