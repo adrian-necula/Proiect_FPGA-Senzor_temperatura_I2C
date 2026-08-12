@@ -24,12 +24,12 @@ module temp_controller #(
     parameter integer FIRST_READ_DELAY = 1_000_000,
     parameter integer READ_INTERVAL = 24_000_000
 )(
-    input logic clk,
-    input logic rst,
-    input logic ready,
-    input logic done,
-    input logic ack,
-    input logic [7:0] dout,
+    input clk,
+    input rst,
+    input ready,
+    input done,
+    input ack,
+    input [7:0] dout,
     output logic cmd_start,
     output logic [2:0] cmd,
     output logic [7:0] din,
@@ -38,14 +38,14 @@ module temp_controller #(
     output logic ack_error
 );
 
-localparam logic [2:0]
+localparam [2:0]
     CMD_START = 3'd0,
     CMD_WRITE = 3'd1,
     CMD_READ_ACK = 3'd2,
     CMD_READ_NACK = 3'd3,
     CMD_STOP = 3'd4;
 
-localparam logic [7:0]
+localparam [7:0]
     SENSOR_ADD_WR = 8'h96,
     SENSOR_ADD_RD = 8'h97,
     TEMP_REG = 8'h00;
@@ -73,7 +73,7 @@ typedef enum logic [4:0] {
 state_t current_state;
 
 logic [7:0] msb;
-integer wait_counter;
+logic [31:0] wait_counter;
 logic first_read;
 
 always @(posedge clk) begin
@@ -86,7 +86,7 @@ always @(posedge clk) begin
         temperature_raw <= 16'h0000;
         data_valid <= 1'b0;
         ack_error <= 1'b0;
-        wait_counter <= 0;
+        wait_counter <= 32'd0;
         first_read <= 1'b1;
     end
     else begin
@@ -99,21 +99,21 @@ always @(posedge clk) begin
                 ack_error <= 1'b0;
                 if (first_read) begin
                     if (wait_counter == FIRST_READ_DELAY - 1) begin
-                        wait_counter <= 0;
+                        wait_counter <= 32'd0;
                         first_read <= 1'b0;
                         current_state <= SEND_START;
                     end
                     else begin
-                        wait_counter <= wait_counter + 1;
+                        wait_counter <= wait_counter + 32'd1;
                     end
                 end
                 else begin
                     if (wait_counter == READ_INTERVAL - 1) begin
-                        wait_counter <= 0;
+                        wait_counter <= 32'd0;
                         current_state <= SEND_START;
                     end
                     else begin
-                        wait_counter <= wait_counter + 1;
+                        wait_counter <= wait_counter + 32'd1;
                     end
                 end
             end
@@ -145,8 +145,9 @@ always @(posedge clk) begin
 
             WAIT_ADD_WR: begin
                 if (done) begin
-                    if (ack)
+                    if (ack) begin
                         current_state <= SEND_REG;
+                    end
                     else begin
                         ack_error <= 1'b1;
                         current_state <= SEND_STOP;
@@ -166,8 +167,9 @@ always @(posedge clk) begin
 
             WAIT_REG: begin
                 if (done) begin
-                    if (ack)
+                    if (ack) begin
                         current_state <= SEND_RESTART;
+                    end
                     else begin
                         ack_error <= 1'b1;
                         current_state <= SEND_STOP;
@@ -185,8 +187,9 @@ always @(posedge clk) begin
             end
 
             WAIT_RESTART: begin
-                if (done)
+                if (done) begin
                     current_state <= SEND_ADD_RD;
+                end
             end
 
             SEND_ADD_RD: begin          // adresa senzor + read
@@ -200,8 +203,9 @@ always @(posedge clk) begin
 
             WAIT_ADD_RD: begin
                 if (done) begin
-                    if (ack)
+                    if (ack) begin
                         current_state <= SEND_RD_MSB;
+                    end
                     else begin
                         ack_error <= 1'b1;
                         current_state <= SEND_STOP;
@@ -242,7 +246,6 @@ always @(posedge clk) begin
             end
 
             SEND_STOP: begin           // stop
-
                 if (ready) begin
                     cmd <= CMD_STOP;
                     din <= 8'h00;
@@ -253,16 +256,17 @@ always @(posedge clk) begin
 
             WAIT_STOP: begin
                 if (done) begin
-                    if (!ack_error)
+                    if (!ack_error) begin
                         data_valid <= 1'b1;
-                    wait_counter <= 0;
+                    end
+                    wait_counter <= 32'd0;
                     current_state <= IDLE;
                 end
             end
 
             default: begin
                 current_state <= IDLE;
-                wait_counter <= 0;
+                wait_counter <= 32'd0;
             end
 
         endcase
