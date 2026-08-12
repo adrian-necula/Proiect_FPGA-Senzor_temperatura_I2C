@@ -214,3 +214,39 @@ Temperatura este pregatita pentru afisare in formatul 25.0°, iar pentru valoril
 
 - [Codul modulului temp_to_digits](src/temp_to_digits.sv)
 
+
+## Structura modulului num
+
+Modulul num este folosit pentru multiplexarea display-ului cu 7 segmente.
+
+Acesta realizeaza un contor pe 20 de biti, iar o parte dintre bitii contorului sunt folositi pentru selectarea succesiva a celor 8 pozitii ale display-ului.
+
+- [Codul modulului num](src/num.sv)
+
+
+## Structura modulului mux
+
+Modulul mux selecteaza una dintre cele 8 valori care trebuie afisate, in functie de semnalul sel.
+
+Pentru afisarea temperaturii sunt folosite cele patru pozitii din stanga ale display-ului, iar celelalte patru pozitii sunt lasate libere.
+
+- [Codul modulului mux](src/mux.sv)
+
+
+## Structura modulului transcodor_7seg
+
+Modulul transcodor_7seg transforma valoarea selectata in semnalele necesare pentru aprinderea segmentelor display-ului.
+
+Pe langa cifrele de la 0 la 9, am adaugat coduri pentru simbolul de grad si pentru o pozitie libera. Semnalul decimal_point este folosit pentru afisarea punctului zecimal.
+
+- [Codul modulului transcodor_7seg](src/transcodor_7seg.sv)
+
+
+## Structura modulului decodor_anod
+
+Modulul decodor_anod selecteaza una dintre cele 8 pozitii ale display-ului in functie de semnalul sel.
+
+Anozii sunt activi pe 0, iar la fiecare moment este activata o singura pozitie.
+
+- [Codul modulului decodor_anod](src/decodor_anod.sv)
+
