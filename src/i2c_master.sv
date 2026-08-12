@@ -28,25 +28,25 @@ module i2c_master #(
     input cmd_start,
     input [2:0] cmd,
     input [7:0] din,
-    input  logic sda_in,
+    input sda_in,
     output logic sda_out,
     output logic scl,
     output logic [7:0] dout,
     output logic ack,
-    output logic ready,
+    output ready,
     output logic done
 );
 
 localparam integer DIVIDER = CLK_FREQ/(4*I2C_FREQ);
 
-localparam logic [2:0]
+localparam [2:0]
     CMD_START = 3'd0,
     CMD_WRITE = 3'd1,
     CMD_READ_ACK = 3'd2,
     CMD_READ_NACK = 3'd3,
     CMD_STOP = 3'd4;
 
-localparam logic [1:0]
+localparam [1:0]
     PHASE_0 = 2'd0,  // pregateste SDA cat timp SCL este 0
     PHASE_1 = 2'd1,    // ridica SCL la 1
     PHASE_2 = 2'd2, // citeste sau mentine SDA cat timp SCL este 1 
@@ -65,9 +65,9 @@ typedef enum logic [2:0] {
 
 i2c_state_t current_state;
 
-integer contor_clk;
+logic [31:0] contor_clk;
 
-logic faza_tick;
+wire faza_tick;
 logic [1:0] faza;
 logic [2:0] bit_index;
 
@@ -82,24 +82,26 @@ assign ready = (current_state == IDLE)||(current_state == HOLD);
 always @(posedge clk) begin
     if (rst) begin
         current_state <= IDLE;
-        contor_clk <= 0;
+        contor_clk <= 32'd0;
         faza <= PHASE_0;
-        bit_index <= 0;
-        date_tx <= 0;
-        date_rx <= 0;
+        bit_index <= 3'd0;
+        date_tx <= 8'h00;
+        date_rx <= 8'h00;
         scl <= 1'b1;
         sda_out <= 1'b1;
-        dout <= 0;
+        dout <= 8'h00;
         ack <= 1'b0;
         nack <= 1'b0;
         done <= 1'b0;
     end
     else begin
         done <= 1'b0;
-        if (faza_tick)
-            contor_clk <= 0;
-        else
-            contor_clk <= contor_clk + 1;
+        if (faza_tick) begin
+            contor_clk <= 32'd0;
+        end
+        else begin
+            contor_clk <= contor_clk + 32'd1;
+        end
 
         case (current_state)
 
@@ -109,7 +111,7 @@ always @(posedge clk) begin
                 faza <= PHASE_0;
                 
                 if (cmd_start && cmd == CMD_START) begin
-                    contor_clk <= 0;
+                    contor_clk <= 32'd0;
                     current_state <= START;
                 end
             end
@@ -143,6 +145,10 @@ always @(posedge clk) begin
                             done <= 1'b1;
                             current_state <= HOLD;
                         end
+                        
+                        default: begin
+                            faza <= PHASE_0;
+                        end
 
                     endcase
                 end
@@ -154,7 +160,7 @@ always @(posedge clk) begin
                 faza <= PHASE_0;
                 
                 if (cmd_start) begin
-                    contor_clk <= 0;
+                    contor_clk <= 32'd0;
 
                     case (cmd)
 
@@ -170,14 +176,14 @@ always @(posedge clk) begin
                         end
 
                         CMD_READ_ACK: begin         // se preg receptionare byte
-                            date_rx <= 0;
+                            date_rx <= 8'h00;
                             bit_index <= 3'd7;
                             nack <= 1'b0;           // masterul trimite ACK
                             current_state <= READ;
                         end
 
                         CMD_READ_NACK: begin        // se citeste byte
-                            date_rx <= 0;
+                            date_rx <= 8'h00;
                             bit_index <= 3'd7;
                             nack <= 1'b1;           // masterul trimite NACK
                             current_state <= READ;
@@ -219,10 +225,16 @@ always @(posedge clk) begin
                         PHASE_3: begin
                             scl <= 1'b0;
                             faza <= PHASE_0;
-                            if (bit_index == 0)
+                            if (bit_index == 3'd0) begin
                                 current_state <= WRITE_ACK;
-                            else
-                                bit_index <= bit_index - 1'b1;
+                            end
+                            else begin
+                                bit_index <= bit_index - 3'd1;
+                            end
+                        end
+                        
+                        default: begin
+                            faza <= PHASE_0;
                         end
 
                     endcase
@@ -256,6 +268,10 @@ always @(posedge clk) begin
                             faza <= PHASE_0;
                             done <= 1'b1;
                             current_state <= HOLD;
+                        end
+                        
+                        default: begin
+                            faza <= PHASE_0;
                         end
 
                     endcase
@@ -293,8 +309,12 @@ always @(posedge clk) begin
                                 current_state <= READ_ACK;
                             end
                             else begin
-                                bit_index <= bit_index - 1'b1;
+                                bit_index <= bit_index - 3'd1;
                             end
+                        end
+                        
+                        default: begin
+                            faza <= PHASE_0;
                         end
 
                     endcase
@@ -308,10 +328,12 @@ always @(posedge clk) begin
 
                         PHASE_0: begin
                             scl <= 1'b0;
-                            if (nack)
+                            if (nack) begin
                                 sda_out <= 1'b1;
-                            else
+                            end
+                            else begin
                                 sda_out <= 1'b0;
+                            end
                             faza <= PHASE_1;
                         end
 
@@ -331,6 +353,10 @@ always @(posedge clk) begin
                             faza <= PHASE_0;
                             done <= 1'b1;
                             current_state <= HOLD;
+                        end
+                        
+                        default: begin
+                            faza <= PHASE_0;
                         end
 
                     endcase
@@ -367,7 +393,11 @@ always @(posedge clk) begin
                             done <= 1'b1;
                             current_state <= IDLE;
                         end
-
+                        
+                        default: begin
+                            faza <= PHASE_0;
+                        end
+                        
                     endcase
                 end
             end
