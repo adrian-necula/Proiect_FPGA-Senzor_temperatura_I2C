@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module temp_converter (
-    input  logic [15:0] temperature_raw,
+    input [15:0] temperature_raw,
     output logic [7:0] temp_celsius,
     output logic [3:0] temp_fraction,
     output logic negative
