@@ -166,6 +166,8 @@ In simulare am urmarit comenzile, semnalele SDA si SCL, starile FSM si datele tr
 
 - [Testbench pentru i2c_master](sim/test_i2c_master.sv)
 
+- ![Simulare I2C Master](images/test_i2c_master.png)
+
 
 ## Structura modulului temp_controller
 
@@ -276,4 +278,25 @@ Am conectat si i2c_dummy_slave pentru simularea comunicatiei I2C, iar pentru fun
 Astfel, modulul top leaga toate modulele necesare pentru citirea, conversia si afisarea temperaturii.
 
 - [Codul modulului top](src/top.sv)
+
+
+## Simularea modulului top
+
+Am realizat modulul test_top pentru verificarea functionarii partii cu temperatura a proiectului.
+
+In simulare am verificat impreuna citirea temperaturii prin I2C, conversia valorii primite si pregatirea acesteia pentru afisarea pe display-ul cu 7 segmente.
+
+Testbench-ul genereaza semnalul de clock si reset-ul, iar dupa reset modulele din top functioneaza automat.
+
+Pentru simularea senzorului am folosit i2c_dummy_slave, care raspunde comenzilor I2C si transmite valoarea 0C80, corespunzatoare unei temperaturi de 25.0 grade.
+
+In waveform am urmarit comenzile I2C, valorile transmise si receptionate, semnalele ACK si data_valid, valoarea temperature_raw si rezultatul obtinut dupa conversie.
+
+La finalul simularii, temperature_raw are valoarea 0C80, iar temperatura obtinuta este 25.0 grade. Cifrele rezultate sunt pregatite pentru afisarea valorii 25.0° pe cei patru digiti din stanga.
+
+- [Testbench pentru modulul top](sim/test_top.sv)
+
+![Simulare test_top - comunicatie I2C si temperatura](images/test_top1.png)
+
+![Simulare test_top - 7seg](images/test_top2.png)
 
