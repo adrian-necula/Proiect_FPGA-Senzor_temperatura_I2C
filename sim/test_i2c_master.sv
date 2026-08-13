@@ -19,7 +19,7 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-module test_i2c_master;
+module test_i2c_master();
 
 localparam integer CLK_FREQ = 100_000_000;
 localparam integer I2C_FREQ = 100_000;
@@ -48,10 +48,8 @@ logic ready;
 logic done;
 logic [7:0] slave_rx_data;
 
-// simulare magistra sda
-always @(*) begin
-    sda_bus = master_sda_out & slave_sda_out;
-end
+// sim magistra sda
+assign sda_bus = master_sda_out & slave_sda_out;
 
 initial begin
     clk = 1'b0;
