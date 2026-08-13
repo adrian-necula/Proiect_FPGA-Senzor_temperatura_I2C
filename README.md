@@ -262,3 +262,18 @@ Anozii sunt activi pe 0, iar la fiecare moment este activata o singura pozitie.
 
 - [Codul modulului decodor_anod](src/decodor_anod.sv)
 
+
+## Structura modulului top
+
+Am realizat modulul top pentru legarea modulelor implementate pana acum.
+
+Am conectat temp_controller cu i2c_master pentru realizarea citirii temperaturii, iar valoarea obtinuta este trimisa mai departe catre temp_converter si temp_to_digits pentru conversie si pregatirea cifrelor.
+
+Pentru afisare am integrat modulele num, mux, transcodor_7seg si decodor_anod. Temperatura este afisata pe cei patru digiti din stanga in formatul 25.0°.
+
+Am conectat si i2c_dummy_slave pentru simularea comunicatiei I2C, iar pentru functionarea pe placa linia SDA este legata la senzor prin IOBUF.
+
+Astfel, modulul top leaga toate modulele necesare pentru citirea, conversia si afisarea temperaturii.
+
+- [Codul modulului top](src/top.sv)
+
