@@ -111,23 +111,37 @@ Astfel, modulul i2c_master nu mai foloseste un port inout, valoarea 1'bz sau o r
 
 Pentru verificarea comunicatiei I2C am realizat modulul i2c_dummy_slave, folosit strict pentru simulare.
 
-Am gandit modulul ca un slave I2C simplificat, care sa reproduca doar comportamentul necesar pentru verificarea modulului i2c_master. In loc ca raspunsurile slave-ului sa fie generate manual din testbench, acestea sunt realizate de un modul separat, care urmareste semnalele SCL si SDA si reactioneaza la comenzile master-ului.
+Modulul functioneaza ca un slave I2C simplificat si este folosit atat pentru verificarea separata a modulului i2c_master, cat si pentru simularea completa a citirii temperaturii.
+
+In functie de primul byte receptionat, dummy slave-ul poate urma doua secvente diferite. Pentru testarea modulului i2c_master receptioneaza valoarea A5 si transmite valoarea 3C. Pentru simularea citirii temperaturii receptioneaza comenzile pentru senzor si transmite valoarea 0C80, corespunzatoare unei temperaturi de 25.0 grade.
 
 Modulul este implementat sub forma unui FSM cu starile:
 
 - WAIT_START - asteapta conditia de START;
-- RECEIVE - receptioneaza cei 8 biti transmisi de master;
-- SEND_ACK - transmite ACK catre master;
+- RECEIVE_FIRST - receptioneaza primul byte transmis de master;
+- SEND_ACK_FIRST - transmite ACK pentru primul byte;
+- RECEIVE_REG - receptioneaza registrul de temperatura;
+- SEND_ACK_REG - transmite ACK pentru registru;
 - WAIT_RESTART - asteapta conditia de repeated START;
-- TRANSMIT - transmite valoarea hardcodata 3C;
-- READ_NACK - asteapta raspunsul NACK al master-ului;
+- RECEIVE_ADD_RD - receptioneaza adresa pentru citire;
+- SEND_ACK_RD - transmite ACK pentru adresa de citire;
+- TRANSMIT_OLD - transmite valoarea 3C pentru testarea separata a master-ului;
+- READ_NACK_OLD - asteapta NACK-ul master-ului pentru testul simplu;
+- TRANSMIT_MSB - transmite byte-ul MSB al temperaturii;
+- READ_ACK - asteapta ACK-ul master-ului;
+- TRANSMIT_LSB - transmite byte-ul LSB al temperaturii;
+- READ_NACK_TEMP - asteapta NACK-ul master-ului dupa citirea temperaturii;
 - WAIT_STOP - asteapta conditia de STOP.
 
-La receptionare, slave-ul citeste valoarea liniei SDA la fiecare front pozitiv al semnalului SCL si formeaza treptat byte-ul primit. La transmitere, valoarea SDA este pregatita pe frontul negativ al lui SCL, astfel incat aceasta sa fie stabila atunci cand master-ul o citeste.
+La receptionare, slave-ul citeste valoarea liniei SDA la fiecare front pozitiv al semnalului SCL. La transmitere, valoarea SDA este pregatita pe frontul negativ al lui SCL, astfel incat aceasta sa fie stabila atunci cand master-ul o citeste.
 
-Pentru testare, slave-ul receptioneaza valoarea A5 transmisa de master, raspunde cu ACK, iar dupa repeated START transmite inapoi valoarea hardcodata 3C. La final, asteapta NACK-ul master-ului si conditia de STOP.
+Pentru testarea separata a master-ului este folosita secventa:
 
-Astfel, comunicatia se realizeaza efectiv intre modulele i2c_master si i2c_dummy_slave.
+START -> WRITE A5 -> ACK -> REPEATED START -> READ 3C -> NACK -> STOP
+
+Pentru simularea citirii temperaturii este folosita secventa:
+
+START -> WRITE 96 -> ACK -> WRITE 00 -> ACK -> REPEATED START -> WRITE 97 -> ACK -> READ 0C -> ACK -> READ 80 -> NACK -> STOP
 
 - [Codul modulului i2c_dummy_slave](src/i2c_dummy_slave.sv)
 
@@ -142,7 +156,7 @@ sda_bus = master_sda_out & slave_sda_out
 
 Atat master-ul, cat si slave-ul folosesc valoarea 0 pentru a trage linia la 0 si valoarea 1 pentru a o elibera. In acest mod nu mai sunt necesare valoarea 1'bz si rezistenta pullup in testbench.
 
-Am verificat urmatoarea secventa:
+Pentru verificarea separata a modulului i2c_master am folosit secventa:
 
 START -> WRITE A5 -> ACK -> REPEATED START -> READ 3C -> NACK -> STOP
 
@@ -151,8 +165,6 @@ Master-ul transmite valoarea A5, iar dummy slave-ul o receptioneaza si raspunde 
 In simulare am urmarit comenzile, semnalele SDA si SCL, starile FSM si datele transmise intre master si slave.
 
 - [Testbench pentru i2c_master](sim/test_i2c_master.sv)
-
-![Simulare I2C Master](images/test_i2c_master.png)
 
 
 ## Structura modulului temp_controller
