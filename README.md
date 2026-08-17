@@ -104,7 +104,7 @@ In modulul actual:
 
 Astfel, modulul i2c_master nu mai foloseste un port inout, valoarea 1'bz sau o rezistenta pullup. Conectarea la pinul fizic bidirectional SDA va fi realizata ulterior in modulul top.
 
-- [Codul modulului i2c_master](src/i2c_master.sv)
+- [Codul modulului i2c_master](src/i2c/i2c_master.sv)
 
 
 ## Structura modulului i2c_dummy_slave
@@ -143,7 +143,7 @@ Pentru simularea citirii temperaturii este folosita secventa:
 
 START -> WRITE 96 -> ACK -> WRITE 00 -> ACK -> REPEATED START -> WRITE 97 -> ACK -> READ 0C -> ACK -> READ 80 -> NACK -> STOP
 
-- [Codul modulului i2c_dummy_slave](src/i2c_dummy_slave.sv)
+- [Codul modulului i2c_dummy_slave](src/i2c/i2c_dummy_slave.sv)
 
 
 ## Simularea modulului i2c_master
@@ -208,7 +208,7 @@ Cei doi bytes cititi formeaza valoarea temperature_raw pe 16 biti. data_valid in
 
 Citirea este realizata periodic folosind FIRST_READ_DELAY si READ_INTERVAL. Am ales FIRST_READ_DELAY = 1_000_000, adica aproximativ 10 ms la 100 MHz, deoarece prima conversie a senzorului dupa pornire dureaza aproximativ 6 ms. READ_INTERVAL = 24_000_000 corespunde la aproximativ 240 ms, valoare aleasa in functie de timpul unei conversii normale a senzorului.
 
-- [Codul modulului temp_controller](src/temp_controller.sv)
+- [Codul modulului temp_controller](src/i2c/temp_controller.sv)
 
 
 ## Structura modulului temp_converter
@@ -217,7 +217,7 @@ Modulul temp_converter realizeaza conversia valorii brute primite de la senzor i
 
 Valoarea temperaturii este separata in partea intreaga, partea zecimala si semn. Pentru temperaturile negative, valoarea este pastrata pozitiva pentru afisaj, iar semnul este transmis separat pentru a putea fi folosit la UART.
 
-- [Codul modulului temp_converter](src/temp_converter.sv)
+- [Codul modulului temp_converter](src/i2c/temp_converter.sv)
 
 
 ## Structura modulului temp_to_digits
@@ -226,7 +226,7 @@ Modulul temp_to_digits pregateste cifrele necesare pentru afisarea temperaturii 
 
 Temperatura este pregatita pentru afisare in formatul 25.0°, iar pentru valorile sub 10 grade prima pozitie este lasata libera.
 
-- [Codul modulului temp_to_digits](src/temp_to_digits.sv)
+- [Codul modulului temp_to_digits](src/i2c/temp_to_digits.sv)
 
 
 ## Structura modulului num
@@ -235,7 +235,7 @@ Modulul num este folosit pentru multiplexarea display-ului cu 7 segmente.
 
 Acesta realizeaza un contor pe 20 de biti, iar o parte dintre bitii contorului sunt folositi pentru selectarea succesiva a celor 8 pozitii ale display-ului.
 
-- [Codul modulului num](src/num.sv)
+- [Codul modulului num](src/display/num.sv)
 
 
 ## Structura modulului mux
@@ -244,7 +244,7 @@ Modulul mux selecteaza una dintre cele 8 valori care trebuie afisate, in functie
 
 Pentru afisarea temperaturii sunt folosite cele patru pozitii din stanga ale display-ului, iar celelalte patru pozitii sunt lasate libere.
 
-- [Codul modulului mux](src/mux.sv)
+- [Codul modulului mux](src/display/mux.sv)
 
 
 ## Structura modulului transcodor_7seg
@@ -253,7 +253,7 @@ Modulul transcodor_7seg transforma valoarea selectata in semnalele necesare pent
 
 Pe langa cifrele de la 0 la 9, am adaugat coduri pentru simbolul de grad si pentru o pozitie libera. Semnalul decimal_point este folosit pentru afisarea punctului zecimal.
 
-- [Codul modulului transcodor_7seg](src/transcodor_7seg.sv)
+- [Codul modulului transcodor_7seg](src/display/transcodor_7seg.sv)
 
 
 ## Structura modulului decodor_anod
@@ -262,7 +262,7 @@ Modulul decodor_anod selecteaza una dintre cele 8 pozitii ale display-ului in fu
 
 Anozii sunt activi pe 0, iar la fiecare moment este activata o singura pozitie.
 
-- [Codul modulului decodor_anod](src/decodor_anod.sv)
+- [Codul modulului decodor_anod](src/display/decodor_anod.sv)
 
 
 ## Structura modulului top
