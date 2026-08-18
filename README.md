@@ -446,16 +446,24 @@ FIFO Generator este folosit de doua ori in modulul top_complet:
 - un FIFO pentru receptia datelor UART;
 - un FIFO pentru transmisia datelor UART.
 
-- [Configurare Clocking Wizard](ip/clk_wiz_uart_senzor.xci)
-- [Configurare FIFO UART](ip/fifo_uart_senzor.xci)
+- [Configurare Clocking Wizard](src/ip/clk_wiz_uart_senzor.xci)
+- [Configurare FIFO UART](src/ip/fifo_uart_senzor.xci)
 
+
+# Afisarea pe display
+
+Pentru afisarea informatiilor am reutilizat si adaptat modulele realizate anterior pentru display-ul cu 7 segmente.
+
+In varianta finala sunt folosite toate cele 8 pozitii ale display-ului: temperatura este afisata pe cele patru pozitii din stanga, iar valoarea counter-ului pe cele patru pozitii din dreapta.
 
 
 ## Structura modulului num
 
 Modulul num este folosit pentru multiplexarea display-ului cu 7 segmente.
 
-Acesta realizeaza un contor pe 20 de biti, iar o parte dintre bitii contorului sunt folositi pentru selectarea succesiva a celor 8 pozitii ale display-ului.
+Acesta realizeaza un contor pe 20 de biti, iar bitii 18:16 sunt folositi pentru selectarea succesiva a celor 8 pozitii ale display-ului.
+
+Structura modulului a fost pastrata fata de varianta folosita anterior.
 
 - [Codul modulului num](src/display/num.sv)
 
@@ -464,7 +472,9 @@ Acesta realizeaza un contor pe 20 de biti, iar o parte dintre bitii contorului s
 
 Modulul mux selecteaza una dintre cele 8 valori care trebuie afisate, in functie de semnalul sel.
 
-Pentru afisarea temperaturii sunt folosite cele patru pozitii din stanga ale display-ului, iar celelalte patru pozitii sunt lasate libere.
+Fata de varianta initiala, in care erau folosite doar cele patru pozitii din stanga pentru temperatura, am extins afisarea astfel incat sa fie utilizate toate cele 8 pozitii.
+
+Cele patru pozitii din stanga sunt folosite pentru temperatura, iar cele patru pozitii din dreapta sunt folosite pentru valoarea counter-ului.
 
 - [Codul modulului mux](src/display/mux.sv)
 
@@ -473,7 +483,11 @@ Pentru afisarea temperaturii sunt folosite cele patru pozitii din stanga ale dis
 
 Modulul transcodor_7seg transforma valoarea selectata in semnalele necesare pentru aprinderea segmentelor display-ului.
 
-Pe langa cifrele de la 0 la 9, am adaugat coduri pentru simbolul de grad si pentru o pozitie libera. Semnalul decimal_point este folosit pentru afisarea punctului zecimal.
+Pe langa cifrele de la 0 la 9, sunt folosite coduri pentru simbolul de grad si pentru o pozitie libera.
+
+Semnalul decimal_point este folosit pentru afisarea punctului zecimal al temperaturii, astfel incat aceasta sa fie afisata in formatul 25.0°.
+
+Structura principala a modulului a fost pastrata fata de varianta realizata anterior.
 
 - [Codul modulului transcodor_7seg](src/display/transcodor_7seg.sv)
 
@@ -482,10 +496,10 @@ Pe langa cifrele de la 0 la 9, am adaugat coduri pentru simbolul de grad si pent
 
 Modulul decodor_anod selecteaza una dintre cele 8 pozitii ale display-ului in functie de semnalul sel.
 
-Anozii sunt activi pe 0, iar la fiecare moment este activata o singura pozitie.
+Anozii sunt activi pe 0, iar in timpul functionarii normale este activata succesiv cate o singura pozitie.
+
+Fata de varianta initiala am adaugat semnalul de reset. Atunci cand resetul global este activ, toti anozii sunt dezactivati, astfel incat display-ul sa fie complet stins.
 
 - [Codul modulului decodor_anod](src/display/decodor_anod.sv)
-
-
 
 
