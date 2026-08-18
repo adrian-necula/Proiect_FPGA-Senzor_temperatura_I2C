@@ -309,7 +309,7 @@ Structura modulului a fost pastrata fata de proiectul UART anterior.
 
 ## Module pentru counter
 
-### Structura modulului counter14b
+## Structura modulului counter14b
 
 Modulul counter14b realizeaza counter-ul folosit in proiect.
 
