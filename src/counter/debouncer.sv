@@ -20,14 +20,14 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module debouncer (
+module debouncer #(
+    parameter integer MAX_COUNT = 2_000_000
+)(
     input clk,
     input rst,
     input btn_in,
     output logic btn_stable
 );
-
-localparam integer MAX_COUNT = 2_000_000;
 
 logic [20:0] counter;
 
