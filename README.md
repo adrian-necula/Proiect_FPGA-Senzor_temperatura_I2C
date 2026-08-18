@@ -229,7 +229,43 @@ Temperatura este pregatita pentru afisare in formatul 25.0°, iar pentru valoril
 - [Codul modulului temp_to_digits](src/i2c/temp_to_digits.sv)
 
 
-## Counter si controlul prin butoane
+## Integrarea initiala - modulul top
+
+Am realizat modulul top pentru integrarea initiala a partii de citire si afisare a temperaturii.
+
+Am conectat temp_controller cu i2c_master pentru realizarea citirii temperaturii, iar valoarea obtinuta este trimisa mai departe catre temp_converter si temp_to_digits pentru conversie si pregatirea cifrelor.
+
+Pentru afisare am integrat modulele num, mux, transcodor_7seg si decodor_anod. Temperatura este afisata pe cei patru digiti din stanga in formatul 25.0°.
+
+Am conectat si i2c_dummy_slave pentru simularea comunicatiei I2C, iar pentru functionarea pe placa linia SDA este legata la senzor prin IOBUF.
+
+Astfel, modulul top leaga toate modulele necesare pentru citirea, conversia si afisarea temperaturii.
+
+- [Codul modulului top initial](src/top.sv)
+
+
+## Simularea integrarii initiale
+
+Am realizat modulul test_top pentru verificarea functionarii partii cu temperatura a proiectului.
+
+In simulare am verificat impreuna citirea temperaturii prin I2C, conversia valorii primite si pregatirea acesteia pentru afisarea pe display-ul cu 7 segmente.
+
+Testbench-ul genereaza semnalul de clock si reset-ul, iar dupa reset modulele din top functioneaza automat.
+
+Pentru simularea senzorului am folosit i2c_dummy_slave, care raspunde comenzilor I2C si transmite valoarea 0C80, corespunzatoare unei temperaturi de 25.0 grade.
+
+In waveform am urmarit comenzile I2C, valorile transmise si receptionate, semnalele ACK si data_valid, valoarea temperature_raw si rezultatul obtinut dupa conversie.
+
+La finalul simularii, temperature_raw are valoarea 0C80, iar temperatura obtinuta este 25.0 grade. Cifrele rezultate sunt pregatite pentru afisarea valorii 25.0° pe cei patru digiti din stanga.
+
+- [Testbench pentru modulul top initial](sim/test_top.sv)
+
+![Simulare test_top initial - comunicatie I2C si temperatura](images/test_top1.png)
+
+![Simulare test_top initial - 7seg](images/test_top2.png)
+
+
+# Counter si controlul prin butoane
 
 Pentru controlul counter-ului am reutilizat si adaptat modulele realizate in proiectul UART anterior.
 
@@ -310,6 +346,110 @@ Formatul transmis a fost pastrat sub forma 0xXXXX pentru a ramane compatibil cu 
 - [Codul modulului counter_to_ascii](src/counter/counter_to_ascii.sv)
 
 
+# Comunicatia UART
+
+Pentru comunicarea cu PC-ul am pornit de la structura realizata in proiectul UART Counter Logger si am adaptat-o pentru proiectul actual.
+
+Am pastrat arhitectura formata din receptie UART, FIFO pentru receptie, decodarea si controlul comenzilor, generarea mesajelor, FIFO pentru transmisie si modulul UART TX.
+
+Fata de proiectul anterior am adaugat transmiterea temperaturii si am extins mesajul de status astfel incat sa contina atat valoarea counter-ului, cat si temperatura curenta.
+
+
+## Structura modulului uart_rx
+
+Modulul uart_rx realizeaza receptionarea caracterelor trimise de la PC prin UART.
+
+Acesta detecteaza bitul de start, receptioneaza cei 8 biti de date si verifica bitul de stop. La final, caracterul receptionat este disponibil pe rx_data, iar rx_done indica terminarea receptiei.
+
+Structura modulului a fost pastrata fata de proiectul UART anterior. In proiectul actual comunicatia este realizata la 9600 baud.
+
+- [Codul modulului uart_rx](src/uart/uart_rx.sv)
+
+
+## Structura modulului uart_tx
+
+Modulul uart_tx realizeaza transmiterea caracterelor catre PC prin UART.
+
+Pentru fiecare caracter sunt transmise bitul de start, cei 8 biti de date si bitul de stop. Semnalul tx_busy indica faptul ca o transmisie este in curs, iar tx_done indica terminarea acesteia.
+
+Structura modulului a fost pastrata fata de proiectul UART anterior, comunicatia fiind realizata la 9600 baud.
+
+- [Codul modulului uart_tx](src/uart/uart_tx.sv)
+
+
+## Structura modulului uart_senzor_command_decoder
+
+Modulul uart_senzor_command_decoder identifica comenzile primite prin UART.
+
+Am pastrat comenzile folosite in proiectul anterior:
+
+- I/i - incrementare;
+- D/d - decrementare;
+- R/r - reset;
+- S/s - status;
+- ? - ajutor.
+
+Pentru proiectul actual am adaugat si:
+
+- T/t - afisarea temperaturii.
+
+- [Codul modulului uart_senzor_command_decoder](src/uart/uart_senzor_command_decoder.sv)
+
+
+## Structura modulului uart_senzor_command_control
+
+Modulul uart_senzor_command_control gestioneaza comenzile primite prin UART si impulsurile generate de butoanele placii.
+
+Modulul controleaza incrementarea, decrementarea si resetarea counter-ului si selecteaza mesajul care trebuie transmis catre PC.
+
+Fata de varianta folosita anterior am adaugat tratarea comenzii pentru temperatura prin mesajul MSG_TEMP.
+
+- [Codul modulului uart_senzor_command_control](src/uart/uart_senzor_command_control.sv)
+
+
+## Structura modulului temp_to_ascii
+
+Modulul temp_to_ascii pregateste temperatura pentru transmiterea prin UART.
+
+Partea intreaga, partea zecimala si semnul temperaturii sunt transformate in caractere ASCII.
+
+Spre deosebire de afisarea pe display-ul cu 7 segmente, prin UART poate fi transmis si semnul temperaturilor negative.
+
+- [Codul modulului temp_to_ascii](src/i2c/temp_to_ascii.sv)
+
+
+## Structura modulului message_sender
+
+Modulul message_sender construieste mesajele transmise catre PC.
+
+Am pornit de la modulul folosit in proiectul UART Counter Logger si l-am extins pentru proiectul actual.
+
+Am adaugat mesajul pentru comanda T/t, transmis sub forma:
+
+"Temperatura: 25.0 grade Celsius"
+
+De asemenea, mesajul pentru comanda S/s a fost modificat astfel incat statusul sa contina atat valoarea counter-ului, cat si temperatura curenta.
+
+Mesajul de ajutor a fost actualizat pentru a include si noua comanda T/t.
+
+- [Codul modulului message_sender](src/uart/message_sender.sv)
+
+
+## IP-uri folosite pentru UART
+
+Pentru integrarea partii UART am folosit un Clocking Wizard si un FIFO Generator.
+
+Clocking Wizard-ul furnizeaza ceasul de 100 MHz folosit de sistem si semnalul locked, utilizat pentru generarea resetului global.
+
+FIFO Generator este folosit de doua ori in modulul top_complet:
+
+- un FIFO pentru receptia datelor UART;
+- un FIFO pentru transmisia datelor UART.
+
+- [Configurare Clocking Wizard](ip/clk_wiz_uart_senzor.xci)
+- [Configurare FIFO UART](ip/fifo_uart_senzor.xci)
+
+
 
 ## Structura modulului num
 
@@ -347,38 +487,5 @@ Anozii sunt activi pe 0, iar la fiecare moment este activata o singura pozitie.
 - [Codul modulului decodor_anod](src/display/decodor_anod.sv)
 
 
-## Structura modulului top
 
-Am realizat modulul top pentru legarea modulelor implementate pana acum.
-
-Am conectat temp_controller cu i2c_master pentru realizarea citirii temperaturii, iar valoarea obtinuta este trimisa mai departe catre temp_converter si temp_to_digits pentru conversie si pregatirea cifrelor.
-
-Pentru afisare am integrat modulele num, mux, transcodor_7seg si decodor_anod. Temperatura este afisata pe cei patru digiti din stanga in formatul 25.0°.
-
-Am conectat si i2c_dummy_slave pentru simularea comunicatiei I2C, iar pentru functionarea pe placa linia SDA este legata la senzor prin IOBUF.
-
-Astfel, modulul top leaga toate modulele necesare pentru citirea, conversia si afisarea temperaturii.
-
-- [Codul modulului top](src/top.sv)
-
-
-## Simularea modulului top
-
-Am realizat modulul test_top pentru verificarea functionarii partii cu temperatura a proiectului.
-
-In simulare am verificat impreuna citirea temperaturii prin I2C, conversia valorii primite si pregatirea acesteia pentru afisarea pe display-ul cu 7 segmente.
-
-Testbench-ul genereaza semnalul de clock si reset-ul, iar dupa reset modulele din top functioneaza automat.
-
-Pentru simularea senzorului am folosit i2c_dummy_slave, care raspunde comenzilor I2C si transmite valoarea 0C80, corespunzatoare unei temperaturi de 25.0 grade.
-
-In waveform am urmarit comenzile I2C, valorile transmise si receptionate, semnalele ACK si data_valid, valoarea temperature_raw si rezultatul obtinut dupa conversie.
-
-La finalul simularii, temperature_raw are valoarea 0C80, iar temperatura obtinuta este 25.0 grade. Cifrele rezultate sunt pregatite pentru afisarea valorii 25.0° pe cei patru digiti din stanga.
-
-- [Testbench pentru modulul top](sim/test_top.sv)
-
-![Simulare test_top - comunicatie I2C si temperatura](images/test_top1.png)
-
-![Simulare test_top - 7seg](images/test_top2.png)
 
