@@ -234,7 +234,7 @@ Temperatura este pregatita pentru afisare in formatul 25.0°, iar pentru valoril
 - [Codul modulului temp_to_digits](src/i2c/temp_to_digits.sv)
 
 
-## Integrarea initiala - modulul top
+# Integrarea initiala - modulul top
 
 Am realizat modulul top pentru integrarea initiala a partii de citire si afisare a temperaturii.
 
