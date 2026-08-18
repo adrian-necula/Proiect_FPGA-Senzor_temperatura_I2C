@@ -229,6 +229,88 @@ Temperatura este pregatita pentru afisare in formatul 25.0°, iar pentru valoril
 - [Codul modulului temp_to_digits](src/i2c/temp_to_digits.sv)
 
 
+## Counter si controlul prin butoane
+
+Pentru controlul counter-ului am reutilizat si adaptat modulele realizate in proiectul UART anterior.
+
+Counter-ul poate fi controlat atat prin comenzile primite prin UART, cat si prin cele trei butoane ale placii pentru incrementare, decrementare si resetare.
+
+
+## Module pentru butoane
+
+Pentru prelucrarea semnalelor provenite de la butoane sunt folosite modulele button_sync, debouncer si edge_detector.
+
+## Structura modulului button_sync
+
+Modulul button_sync realizeaza sincronizarea semnalului primit de la buton cu semnalul de clock al sistemului.
+
+Pentru sincronizare sunt folosite doua registre succesive. Structura modulului a fost pastrata fata de proiectul UART anterior.
+
+- [Codul modulului button_sync](src/counter/button_sync.sv)
+
+
+## Structura modulului debouncer
+
+Modulul debouncer elimina oscilatiile care pot aparea la apasarea sau eliberarea unui buton.
+
+Schimbarea starii este acceptata doar daca noua valoare ramane stabila pentru un anumit numar de cicluri de clock.
+
+Fata de proiectul anterior, valoarea MAX_COUNT a fost transformata intr-un parametru. In functionarea pe placa aceasta ramane implicit 2_000_000, iar in simulare poate fi redusa pentru scurtarea timpului necesar testarii butoanelor.
+
+- [Codul modulului debouncer](src/counter/debouncer.sv)
+
+
+## Structura modulului edge_detector
+
+Modulul edge_detector detecteaza frontul crescator al semnalului stabilizat de la buton.
+
+La fiecare apasare este generat un impuls cu durata de un singur ciclu de clock, folosit pentru incrementarea, decrementarea sau resetarea counter-ului.
+
+Structura modulului a fost pastrata fata de proiectul UART anterior.
+
+- [Codul modulului edge_detector](src/counter/edge_detector.sv)
+
+
+## Module pentru counter
+
+### Structura modulului counter14b
+
+Modulul counter14b realizeaza counter-ul folosit in proiect.
+
+Fata de counter-ul pe 16 biti folosit in proiectul UART anterior, acesta a fost modificat la 14 biti si limitat la intervalul 0 - 9999, deoarece valoarea trebuie afisata pe cele patru pozitii din dreapta ale display-ului.
+
+La incrementarea valorii 9999, counter-ul revine la 0 si este generat semnalul overflow.
+
+La decrementarea valorii 0, counter-ul trece la 9999 si este generat semnalul underflow.
+
+Counter-ul poate fi si resetat direct la valoarea 0.
+
+- [Codul modulului counter14b](src/counter/counter14b.sv)
+
+
+## Structura modulului binary_to_decimal
+
+Modulul binary_to_decimal transforma valoarea counter-ului in patru cifre zecimale.
+
+Acest modul este necesar pentru afisarea valorii pe cele patru pozitii din dreapta ale display-ului cu 7 segmente.
+
+Sunt obtinute separat cifra unitatilor, zecilor, sutelor si miilor.
+
+- [Codul modulului binary_to_decimal](src/counter/binary_to_decimal.sv)
+
+
+## Structura modulului counter_to_ascii
+
+Modulul counter_to_ascii pregateste valoarea counter-ului pentru transmiterea prin UART.
+
+Fata de varianta folosita anterior pentru counter-ul pe 16 biti, modulul a fost adaptat pentru noua valoare pe 14 biti.
+
+Formatul transmis a fost pastrat sub forma 0xXXXX pentru a ramane compatibil cu mesajele realizate in proiectul UART anterior.
+
+- [Codul modulului counter_to_ascii](src/counter/counter_to_ascii.sv)
+
+
+
 ## Structura modulului num
 
 Modulul num este folosit pentru multiplexarea display-ului cu 7 segmente.
