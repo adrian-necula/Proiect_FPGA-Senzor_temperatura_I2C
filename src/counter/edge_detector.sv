@@ -21,9 +21,9 @@
 
 
 module edge_detector (
-    input logic clk,
-    input logic rst,
-    input logic signal_in,
+    input clk,
+    input rst,
+    input signal_in,
     output logic pulse_out
 );
 
