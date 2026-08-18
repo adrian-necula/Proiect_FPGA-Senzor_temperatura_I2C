@@ -168,6 +168,11 @@ In simulare am urmarit comenzile, semnalele SDA si SCL, starile FSM si datele tr
 
 - ![Simulare I2C Master](images/test_i2c_master.png)
 
+# Citirea si prelucrarea temperaturii
+
+Pentru citirea si prelucrarea temperaturii sunt folosite modulele temp_controller, temp_converter si temp_to_digits.
+
+temp_controller controleaza secventa de comunicatie cu senzorul, temp_converter realizeaza conversia valorii brute in grade Celsius, iar temp_to_digits pregateste valoarea pentru afisarea pe display.
 
 ## Structura modulului temp_controller
 
