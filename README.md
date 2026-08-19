@@ -508,3 +508,19 @@ Fata de varianta initiala am adaugat semnalul de reset. Atunci cand resetul glob
 - [Codul modulului decodor_anod](src/display/decodor_anod.sv)
 
 
+# Integrarea finala - modulul top_complet
+
+In top_complet am pus impreuna toate modulele realizate pana acum, astfel incat proiectul sa functioneze ca un sistem complet.
+
+Am conectat partea de I2C pentru citirea temperaturii cu counter-ul, butoanele, UART-ul si afisarea pe display. Pentru clock am folosit Clocking Wizard-ul, iar semnalul locked este folosit si la resetul global al sistemului.
+
+Comunicatia UART functioneaza la 9600 baud, iar pentru receptie si transmisie sunt folosite cele doua FIFO-uri.
+
+Counter-ul poate fi modificat atat din comenzile UART, cat si din butoanele de pe placa. Valoarea lui este afisata si pe cele 14 LED-uri, iar pe display temperatura apare in partea stanga si counter-ul in partea dreapta.
+
+Am adaugat si fisierul de constrangeri pentru placa Nexys A7, unde sunt setati pinii folositi pentru clock, butoane, UART, I2C, LED-uri si display.
+
+- [Codul modulului top_complet](src/top_complet.sv)
+- [Fisierul de constrangeri](constraints/top.xdc)
+
+  
