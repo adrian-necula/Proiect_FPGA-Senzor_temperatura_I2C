@@ -9,13 +9,13 @@ Implementați un master I2C în SystemVerilog, fără IP core-uri Xilinx. Master
 
 Am inceput proiectul prin documentarea despre protocolul I2C si despre comunicarea dintre un dispozitiv master si unul sau mai multe dispozitive slave.
 
-Am impartit proiectul in urmatoarele module:
+Pentru partea de citire si prelucrare a temperaturii am impartit proiectul initial in urmatoarele module:
 
 - i2c_master - realizeaza operatiile de baza ale protocolului I2C;
 - temp_controller - controleaza comenzile necesare citirii senzorului;
 - temp_converter - converteste valoarea citita in grade Celsius.
 
-Pentru afisarea temperaturii si a counter-ului voi reutiliza si adapta modulele realizate in primul proiect:
+Pentru afisarea temperaturii si a counter-ului am reutilizat si adaptat modulele realizate in primul proiect:
 
 - binary_to_decimal;
 - num;
@@ -23,7 +23,7 @@ Pentru afisarea temperaturii si a counter-ului voi reutiliza si adapta modulele 
 - transcodor_7seg;
 - decodor_anod.
 
-Temperatura va fi afisata pe cei patru digiti din stanga, iar counter-ul pe cei patru digiti din dreapta.
+Temperatura este afisata pe cei patru digiti din stanga, iar counter-ul pe cei patru digiti din dreapta.
 
 
 ### Protocolul I2C
@@ -102,7 +102,7 @@ In modulul actual:
 - sda_out = 1 inseamna ca master-ul elibereaza linia;
 - sda_in este folosit pentru citirea datelor si a raspunsului ACK.
 
-Astfel, modulul i2c_master nu mai foloseste un port inout, valoarea 1'bz sau o rezistenta pullup. Conectarea la pinul fizic bidirectional SDA va fi realizata ulterior in modulul top.
+Astfel, modulul i2c_master nu mai foloseste un port inout, valoarea 1'bz sau o rezistenta pullup. Conectarea la pinul fizic bidirectional SDA este realizata in modulul top prin intermediul unui IOBUF.
 
 - [Codul modulului i2c_master](src/i2c/i2c_master.sv)
 
@@ -166,7 +166,7 @@ In simulare am urmarit comenzile, semnalele SDA si SCL, starile FSM si datele tr
 
 - [Testbench pentru i2c_master](sim/test_i2c_master.sv)
 
-- ![Simulare I2C Master](images/test_i2c_master.png)
+![Simulare I2C Master](images/test_i2c_master.png)
 
 # Citirea si prelucrarea temperaturii
 
@@ -524,3 +524,24 @@ Am adaugat si fisierul de constrangeri pentru placa Nexys A7, unde sunt setati p
 - [Fisierul de constrangeri](constraints/top.xdc)
 
   
+## Simularea finala - test_top_complet
+
+Pentru top_complet am realizat si un testbench in care am verificat functionarea proiectului complet.
+
+In simulare am urmarit citirea temperaturii prin I2C, prelucrarea valorii primite, comenzile UART, modificarea counter-ului si functionarea butoanelor. Am verificat si partea de transmitere a mesajelor si afisarea pe display.
+
+Ca sa nu dureze foarte mult simularea, am setat UART-ul la 1 Mbaud si am redus valoarea folosita pentru debouncing. In modulul top_complet valorile raman cele pentru functionarea pe placa, adica 9600 baud si 2_000_000 pentru debouncing.
+
+Pentru testarea temperaturii, dummy slave-ul trimite valoarea 0C80, care este convertita la 25.0 grade Celsius.
+
+Am trimis pe UART comenzile pentru incrementare, decrementare, reset, status, temperatura, ajutor si am testat si cazul unei comenzi necunoscute. Dupa aceea am simulat si apasarea butoanelor pentru incrementare, decrementare si reset.
+
+La final message_count ajunge la 13, deci toate mesajele folosite in test au fost generate.
+
+- [Testbench pentru top_complet](sim/test_top_complet.sv)
+
+![Simulare top_complet - I2C si temperatura](images/test_top_complet1.png)
+
+![Simulare top_complet - UART si counter](images/test_top_complet2.png)
+
+![Simulare top_complet - mesaje si display](images/test_top_complet3.png)
