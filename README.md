@@ -545,3 +545,14 @@ La final message_count ajunge la 13, deci toate mesajele folosite in test au fos
 ![Simulare top_complet - UART si counter](images/test_top_complet2.png)
 
 ![Simulare top_complet - mesaje si display](images/test_top_complet3.png)
+
+
+# Testarea pe placa
+
+Am testat proiectul final pe placa si am verificat functionarea comenzilor UART, a counter-ului si citirea temperaturii de la senzor.
+
+Am testat incrementarea, decrementarea si resetarea counter-ului atat prin UART, cat si prin butoanele placii. Am verificat si cazurile de overflow si underflow.
+
+Prin PuTTY am verificat si comenzile pentru status, temperatura si afisarea meniului de ajutor.
+
+![Testare finala pe placa](images/test_putty.png)
